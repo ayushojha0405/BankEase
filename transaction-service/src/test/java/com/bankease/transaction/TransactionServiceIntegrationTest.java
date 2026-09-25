@@ -53,11 +53,11 @@ class TransactionServiceIntegrationTest {
         Mockito.when(accountServiceClient.getAccount(1L)).thenReturn(account);
         Mockito.when(accountServiceClient.updateBalance(eq(1L), any())).thenReturn(updatedBalance);
 
-        DepositRequest request = DepositRequest.builder()
-                .accountId(1L)
-                .amount(new BigDecimal("2000.00"))
-                .description("Bonus deposit")
-                .build();
+        DepositRequest request = new DepositRequest(
+                1L,
+                new BigDecimal("2000.00"),
+                "Bonus deposit"
+        );
 
         mockMvc.perform(post("/api/v1/transactions/deposit")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -79,11 +79,11 @@ class TransactionServiceIntegrationTest {
         Mockito.when(accountServiceClient.getAccount(1L)).thenReturn(account);
         Mockito.when(accountServiceClient.updateBalance(eq(1L), any())).thenReturn(updatedBalance);
 
-        WithdrawRequest request = WithdrawRequest.builder()
-                .accountId(1L)
-                .amount(new BigDecimal("1000.00"))
-                .description("ATM withdrawal")
-                .build();
+        WithdrawRequest request = new WithdrawRequest(
+                1L,
+                new BigDecimal("1000.00"),
+                "ATM withdrawal"
+        );
 
         mockMvc.perform(post("/api/v1/transactions/withdraw")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -105,16 +105,17 @@ class TransactionServiceIntegrationTest {
         Mockito.when(accountServiceClient.updateBalance(eq(1L), any()))
                 .thenThrow(new InsufficientFundsException("Insufficient funds in account ID 1. Current balance: 500.00"));
 
-        WithdrawRequest request = WithdrawRequest.builder()
-                .accountId(1L)
-                .amount(new BigDecimal("2000.00"))
-                .description("Overdraft attempt")
-                .build();
+        WithdrawRequest request = new WithdrawRequest(
+                1L,
+                new BigDecimal("2000.00"),
+                "Overdraft attempt"
+        );
 
         mockMvc.perform(post("/api/v1/transactions/withdraw")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode", is("TXN-4001")))
                 .andExpect(jsonPath("$.error", is("Insufficient Funds")));
     }
 
@@ -126,15 +127,15 @@ class TransactionServiceIntegrationTest {
 
         Mockito.when(accountServiceClient.getAccount(1L)).thenReturn(fromAcc);
         Mockito.when(accountServiceClient.getAccount(2L)).thenReturn(toAcc);
-        Mockito.when(accountServiceClient.updateBalance(eq(1L), any())).thenReturn(new BalanceDto());
-        Mockito.when(accountServiceClient.updateBalance(eq(2L), any())).thenReturn(new BalanceDto());
+        Mockito.when(accountServiceClient.updateBalance(eq(1L), any())).thenReturn(new BalanceDto(1L, "Vikram Seth", new BigDecimal("3500.00"), LocalDateTime.now()));
+        Mockito.when(accountServiceClient.updateBalance(eq(2L), any())).thenReturn(new BalanceDto(2L, "Ananya Rao", new BigDecimal("2500.00"), LocalDateTime.now()));
 
-        TransferRequest request = TransferRequest.builder()
-                .fromAccountId(1L)
-                .toAccountId(2L)
-                .amount(new BigDecimal("1500.00"))
-                .description("Consulting fee")
-                .build();
+        TransferRequest request = new TransferRequest(
+                1L,
+                2L,
+                new BigDecimal("1500.00"),
+                "Consulting fee"
+        );
 
         mockMvc.perform(post("/api/v1/transactions/transfer")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -151,16 +152,18 @@ class TransactionServiceIntegrationTest {
     @Test
     @DisplayName("Should reject self-transfer attempt")
     void testSelfTransferRejection() throws Exception {
-        TransferRequest request = TransferRequest.builder()
-                .fromAccountId(1L)
-                .toAccountId(1L)
-                .amount(new BigDecimal("500.00"))
-                .build();
+        TransferRequest request = new TransferRequest(
+                1L,
+                1L,
+                new BigDecimal("500.00"),
+                "Self-transfer"
+        );
 
         mockMvc.perform(post("/api/v1/transactions/transfer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode", is("TXN-4002")))
                 .andExpect(jsonPath("$.message", containsString("Source and destination account IDs cannot be the same")));
     }
 }

@@ -1,11 +1,13 @@
 package com.bankease.account.entity;
 
+import com.bankease.account.exception.InsufficientBalanceException;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "accounts")
@@ -28,6 +30,7 @@ public class Account {
 
     /**
      * Optimistic locking version field to prevent lost updates during concurrent transactions.
+     * Managed automatically by Hibernate.
      */
     @Version
     @Column(name = "version")
@@ -44,70 +47,40 @@ public class Account {
     public Account() {
     }
 
-    public Account(Long accountId, String accountHolderName, AccountType accountType, BigDecimal balance, Long version, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.accountId = accountId;
-        this.accountHolderName = accountHolderName;
-        this.accountType = accountType;
-        this.balance = balance != null ? balance : BigDecimal.ZERO;
-        this.version = version;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+    public Account(String accountHolderName, AccountType accountType, BigDecimal initialDeposit) {
+        this.accountHolderName = Objects.requireNonNull(accountHolderName, "Account holder name required").trim();
+        this.accountType = Objects.requireNonNull(accountType, "Account type required");
+        this.balance = initialDeposit != null ? initialDeposit : BigDecimal.ZERO;
     }
 
-    public static AccountBuilder builder() {
-        return new AccountBuilder();
+    // --- Rich Domain Model Methods ---
+
+    /**
+     * Debits funds from the account while strictly enforcing balance sufficiency invariants.
+     */
+    public void debit(BigDecimal amount) {
+        Objects.requireNonNull(amount, "Debit amount cannot be null");
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Debit amount must be strictly greater than zero");
+        }
+        if (this.balance.compareTo(amount) < 0) {
+            throw new InsufficientBalanceException(this.accountId, this.balance, amount);
+        }
+        this.balance = this.balance.subtract(amount);
     }
 
-    public static class AccountBuilder {
-        private Long accountId;
-        private String accountHolderName;
-        private AccountType accountType;
-        private BigDecimal balance = BigDecimal.ZERO;
-        private Long version;
-        private LocalDateTime createdAt;
-        private LocalDateTime updatedAt;
-
-        public AccountBuilder accountId(Long accountId) {
-            this.accountId = accountId;
-            return this;
+    /**
+     * Credits funds into the account.
+     */
+    public void credit(BigDecimal amount) {
+        Objects.requireNonNull(amount, "Credit amount cannot be null");
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Credit amount must be strictly greater than zero");
         }
-
-        public AccountBuilder accountHolderName(String accountHolderName) {
-            this.accountHolderName = accountHolderName;
-            return this;
-        }
-
-        public AccountBuilder accountType(AccountType accountType) {
-            this.accountType = accountType;
-            return this;
-        }
-
-        public AccountBuilder balance(BigDecimal balance) {
-            this.balance = balance;
-            return this;
-        }
-
-        public AccountBuilder version(Long version) {
-            this.version = version;
-            return this;
-        }
-
-        public AccountBuilder createdAt(LocalDateTime createdAt) {
-            this.createdAt = createdAt;
-            return this;
-        }
-
-        public AccountBuilder updatedAt(LocalDateTime updatedAt) {
-            this.updatedAt = updatedAt;
-            return this;
-        }
-
-        public Account build() {
-            return new Account(accountId, accountHolderName, accountType, balance, version, createdAt, updatedAt);
-        }
+        this.balance = this.balance.add(amount);
     }
 
-    // Getters and Setters
+    // Standard Accessors
     public Long getAccountId() {
         return accountId;
     }
@@ -120,47 +93,23 @@ public class Account {
         return accountHolderName;
     }
 
-    public void setAccountHolderName(String accountHolderName) {
-        this.accountHolderName = accountHolderName;
-    }
-
     public AccountType getAccountType() {
         return accountType;
-    }
-
-    public void setAccountType(AccountType accountType) {
-        this.accountType = accountType;
     }
 
     public BigDecimal getBalance() {
         return balance;
     }
 
-    public void setBalance(BigDecimal balance) {
-        this.balance = balance;
-    }
-
     public Long getVersion() {
         return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
     }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

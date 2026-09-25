@@ -32,7 +32,7 @@ public class AccountController {
     @Operation(summary = "Create a new bank account", description = "Opens a new SAVINGS or CURRENT account with an optional initial deposit.")
     public ResponseEntity<ApiResponse<AccountResponse>> createAccount(
             @Valid @RequestBody AccountCreateRequest request) {
-        log.info("Received request to create account for {}", request.getAccountHolderName());
+        log.info("REST: Request received to open account for customer '{}'", request.accountHolderName());
         AccountResponse response = accountService.createAccount(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Account created successfully", response));
@@ -55,11 +55,11 @@ public class AccountController {
     }
 
     @PutMapping("/{id}/balance")
-    @Operation(summary = "Update account balance (Internal REST call)", description = "Debits or credits an account balance. Typically invoked by Transaction Service.")
+    @Operation(summary = "Update account balance (Internal REST call)", description = "Debits or credits an account balance. Invoked synchronously by Transaction Service.")
     public ResponseEntity<ApiResponse<BalanceResponse>> updateBalance(
             @Parameter(description = "Account ID", example = "1") @PathVariable("id") Long id,
             @Valid @RequestBody BalanceUpdateRequest request) {
-        log.info("Balance update requested on account {}: {} amount {}", id, request.getOperation(), request.getAmount());
+        log.info("REST: Internal balance update request on account #{}: {} {}", id, request.operation(), request.amount());
         BalanceResponse response = accountService.updateBalance(id, request);
         return ResponseEntity.ok(ApiResponse.ok("Balance updated successfully", response));
     }

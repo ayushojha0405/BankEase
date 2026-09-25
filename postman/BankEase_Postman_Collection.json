@@ -26,7 +26,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -34,8 +37,14 @@
             },
             "url": {
               "raw": "{{account_service_url}}/api/v1/accounts",
-              "host": ["{{account_service_url}}"],
-              "path": ["api", "v1", "accounts"]
+              "host": [
+                "{{account_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
             }
           }
         },
@@ -44,7 +53,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -52,8 +64,14 @@
             },
             "url": {
               "raw": "{{account_service_url}}/api/v1/accounts",
-              "host": ["{{account_service_url}}"],
-              "path": ["api", "v1", "accounts"]
+              "host": [
+                "{{account_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
             }
           }
         },
@@ -63,8 +81,15 @@
             "method": "GET",
             "url": {
               "raw": "{{account_service_url}}/api/v1/accounts/1",
-              "host": ["{{account_service_url}}"],
-              "path": ["api", "v1", "accounts", "1"]
+              "host": [
+                "{{account_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "1"
+              ]
             }
           }
         },
@@ -74,8 +99,16 @@
             "method": "GET",
             "url": {
               "raw": "{{account_service_url}}/api/v1/accounts/1/balance",
-              "host": ["{{account_service_url}}"],
-              "path": ["api", "v1", "accounts", "1", "balance"]
+              "host": [
+                "{{account_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "1",
+                "balance"
+              ]
             }
           }
         },
@@ -85,11 +118,23 @@
             "method": "GET",
             "url": {
               "raw": "{{account_service_url}}/api/v1/accounts?page=0&size=20",
-              "host": ["{{account_service_url}}"],
-              "path": ["api", "v1", "accounts"],
+              "host": [
+                "{{account_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ],
               "query": [
-                { "key": "page", "value": "0" },
-                { "key": "size", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
               ]
             }
           }
@@ -104,7 +149,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -112,8 +160,15 @@
             },
             "url": {
               "raw": "{{transaction_service_url}}/api/v1/transactions/deposit",
-              "host": ["{{transaction_service_url}}"],
-              "path": ["api", "v1", "transactions", "deposit"]
+              "host": [
+                "{{transaction_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "deposit"
+              ]
             }
           }
         },
@@ -122,7 +177,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -130,8 +188,15 @@
             },
             "url": {
               "raw": "{{transaction_service_url}}/api/v1/transactions/withdraw",
-              "host": ["{{transaction_service_url}}"],
-              "path": ["api", "v1", "transactions", "withdraw"]
+              "host": [
+                "{{transaction_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "withdraw"
+              ]
             }
           }
         },
@@ -140,7 +205,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -148,8 +216,15 @@
             },
             "url": {
               "raw": "{{transaction_service_url}}/api/v1/transactions/transfer",
-              "host": ["{{transaction_service_url}}"],
-              "path": ["api", "v1", "transactions", "transfer"]
+              "host": [
+                "{{transaction_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "transfer"
+              ]
             }
           }
         },
@@ -159,8 +234,16 @@
             "method": "GET",
             "url": {
               "raw": "{{transaction_service_url}}/api/v1/transactions/account/1",
-              "host": ["{{transaction_service_url}}"],
-              "path": ["api", "v1", "transactions", "account", "1"]
+              "host": [
+                "{{transaction_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "account",
+                "1"
+              ]
             }
           }
         },
@@ -169,7 +252,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -177,8 +263,15 @@
             },
             "url": {
               "raw": "{{transaction_service_url}}/api/v1/transactions/withdraw",
-              "host": ["{{transaction_service_url}}"],
-              "path": ["api", "v1", "transactions", "withdraw"]
+              "host": [
+                "{{transaction_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "withdraw"
+              ]
             }
           }
         },
@@ -187,7 +280,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -195,8 +291,15 @@
             },
             "url": {
               "raw": "{{transaction_service_url}}/api/v1/transactions/transfer",
-              "host": ["{{transaction_service_url}}"],
-              "path": ["api", "v1", "transactions", "transfer"]
+              "host": [
+                "{{transaction_service_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "transfer"
+              ]
             }
           }
         }

@@ -11,7 +11,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,85 +21,85 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccountNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleAccountNotFound(AccountNotFoundException ex, HttpServletRequest request) {
-        log.warn("Account not found: {}", ex.getMessage());
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
+        log.warn("Account query failed: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                BankErrorCode.ACCOUNT_NOT_FOUND.getCode(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     @ExceptionHandler(InsufficientBalanceException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientBalance(InsufficientBalanceException ex, HttpServletRequest request) {
-        log.warn("Insufficient balance: {}", ex.getMessage());
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Insufficient Funds")
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
+        log.warn("Debit rejected: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                BankErrorCode.INSUFFICIENT_FUNDS.getCode(),
+                "Insufficient Funds",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(InvalidAccountOperationException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOperation(InvalidAccountOperationException ex, HttpServletRequest request) {
-        log.warn("Invalid account operation: {}", ex.getMessage());
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
+        log.warn("Invalid operation: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                BankErrorCode.VALIDATION_FAILED.getCode(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        Map<String, String> errors = new HashMap<>();
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            errors.put(fieldError.getField(), fieldError.getDefaultMessage());
+        Map<String, String> fieldErrors = new HashMap<>();
+        for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
+            fieldErrors.put(fe.getField(), fe.getDefaultMessage());
         }
-        log.warn("Validation failed for {}: {}", request.getRequestURI(), errors);
+        log.warn("Validation failure on {}: {}", request.getRequestURI(), fieldErrors);
 
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Validation Failed")
-                .message("Input validation failed for one or more fields")
-                .path(request.getRequestURI())
-                .validationErrors(errors)
-                .build();
+        ErrorResponse error = ErrorResponse.validation(
+                HttpStatus.BAD_REQUEST.value(),
+                BankErrorCode.VALIDATION_FAILED.getCode(),
+                "Validation Failed",
+                "One or more request parameters failed validation rules",
+                request.getRequestURI(),
+                fieldErrors
+        );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLocking(OptimisticLockingFailureException ex, HttpServletRequest request) {
-        log.warn("Optimistic locking conflict on {}: {}", request.getRequestURI(), ex.getMessage());
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
-                .message("The account was modified by a concurrent transaction. Please retry.")
-                .path(request.getRequestURI())
-                .build();
+        log.warn("Optimistic lock conflict on {}: concurrent update detected", request.getRequestURI());
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                BankErrorCode.CONCURRENT_MUTATION.getCode(),
+                "Conflict",
+                "Account was modified concurrently by another transaction. Please retry.",
+                request.getRequestURI()
+        );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled exception processing request to {}: ", request.getRequestURI(), ex);
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("An unexpected error occurred. Please contact support.")
-                .path(request.getRequestURI())
-                .build();
+        log.error("Unhandled anomaly processing request on {}: ", request.getRequestURI(), ex);
+        ErrorResponse error = ErrorResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                BankErrorCode.INTERNAL_ERROR.getCode(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                "A system error occurred while processing the account operation.",
+                request.getRequestURI()
+        );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }

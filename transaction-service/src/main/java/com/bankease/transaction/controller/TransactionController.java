@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class TransactionController {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionController.class);
-
     private final TransactionService transactionService;
 
     public TransactionController(TransactionService transactionService) {
@@ -33,7 +32,7 @@ public class TransactionController {
     @Operation(summary = "Deposit funds", description = "Credits money into a target account and records an immutable audit log.")
     public ResponseEntity<ApiResponse<TransactionResponse>> deposit(
             @Valid @RequestBody DepositRequest request) {
-        log.info("Received deposit request for account ID {}", request.getAccountId());
+        log.info("REST: Deposit requested for account #{}, amount: {}", request.accountId(), request.amount());
         TransactionResponse response = transactionService.deposit(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Deposit processed successfully", response));
@@ -43,7 +42,7 @@ public class TransactionController {
     @Operation(summary = "Withdraw funds", description = "Debits money from an account if sufficient balance is available.")
     public ResponseEntity<ApiResponse<TransactionResponse>> withdraw(
             @Valid @RequestBody WithdrawRequest request) {
-        log.info("Received withdrawal request for account ID {}", request.getAccountId());
+        log.info("REST: Withdrawal requested for account #{}, amount: {}", request.accountId(), request.amount());
         TransactionResponse response = transactionService.withdraw(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Withdrawal processed successfully", response));
@@ -53,7 +52,8 @@ public class TransactionController {
     @Operation(summary = "Transfer funds between accounts", description = "Executes an atomic 2-legged transfer between two distinct accounts with automatic compensation on downstream failure.")
     public ResponseEntity<ApiResponse<TransactionResponse>> transfer(
             @Valid @RequestBody TransferRequest request) {
-        log.info("Received transfer request from {} to {}", request.getFromAccountId(), request.getToAccountId());
+        log.info("REST: Transfer requested from #{} to #{}, amount: {}",
+                request.fromAccountId(), request.toAccountId(), request.amount());
         TransactionResponse response = transactionService.transfer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Transfer processed successfully", response));

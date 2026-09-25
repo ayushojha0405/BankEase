@@ -29,11 +29,9 @@ public class AccountServiceClient {
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .build();
-        log.info("Initialized AccountServiceClient pointing to base URL: {}", baseUrl);
     }
 
     public AccountDto getAccount(Long accountId) {
-        log.debug("Calling Account Service GET /api/v1/accounts/{}", accountId);
         try {
             String rawJson = restClient.get()
                     .uri("/api/v1/accounts/{id}", accountId)
@@ -46,27 +44,24 @@ public class AccountServiceClient {
                         handleClientError(response.getBody().readAllBytes());
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (request, response) -> {
-                        throw new AccountServiceUnavailableException("Account Service returned 5xx error");
+                        throw new AccountServiceUnavailableException("Account Service returned 5xx server error");
                     })
                     .body(String.class);
 
-            JsonNode root = objectMapper.readTree(rawJson);
-            JsonNode dataNode = root.get("data");
+            JsonNode dataNode = objectMapper.readTree(rawJson).get("data");
             return objectMapper.treeToValue(dataNode, AccountDto.class);
         } catch (ResourceAccessException ex) {
-            log.error("Failed to connect to Account Service: {}", ex.getMessage());
-            throw new AccountServiceUnavailableException("Account Service is unreachable. Please verify it is running on port 8081.", ex);
+            log.error("Network I/O failure communicating with Account Service: {}", ex.getMessage());
+            throw new AccountServiceUnavailableException("Account Service is unreachable on port 8081", ex);
         } catch (AccountNotFoundException | AccountServiceUnavailableException | InsufficientFundsException ex) {
             throw ex;
         } catch (Exception ex) {
-            log.error("Error calling Account Service: {}", ex.getMessage(), ex);
-            throw new AccountServiceUnavailableException("Error communicating with Account Service: " + ex.getMessage(), ex);
+            log.error("Unexpected error in AccountServiceClient: {}", ex.getMessage(), ex);
+            throw new AccountServiceUnavailableException("Communication error with Account Service: " + ex.getMessage(), ex);
         }
     }
 
     public BalanceDto updateBalance(Long accountId, BalanceUpdateRequestDto request) {
-        log.info("Calling Account Service PUT /api/v1/accounts/{}/balance with op: {}, amount: {}",
-                accountId, request.getOperation(), request.getAmount());
         try {
             String rawJson = restClient.put()
                     .uri("/api/v1/accounts/{id}/balance", accountId)
@@ -81,21 +76,20 @@ public class AccountServiceClient {
                         handleClientError(body);
                     })
                     .onStatus(HttpStatusCode::is5xxServerError, (clientReq, response) -> {
-                        throw new AccountServiceUnavailableException("Account Service failed during balance update");
+                        throw new AccountServiceUnavailableException("Downstream Account Service failed during balance mutation");
                     })
                     .body(String.class);
 
-            JsonNode root = objectMapper.readTree(rawJson);
-            JsonNode dataNode = root.get("data");
+            JsonNode dataNode = objectMapper.readTree(rawJson).get("data");
             return objectMapper.treeToValue(dataNode, BalanceDto.class);
         } catch (ResourceAccessException ex) {
-            log.error("Failed to connect to Account Service: {}", ex.getMessage());
-            throw new AccountServiceUnavailableException("Account Service is unreachable during balance update.", ex);
+            log.error("Network I/O failure updating balance in Account Service: {}", ex.getMessage());
+            throw new AccountServiceUnavailableException("Account Service connection timed out or unreachable.", ex);
         } catch (AccountNotFoundException | AccountServiceUnavailableException | InsufficientFundsException ex) {
             throw ex;
         } catch (Exception ex) {
             log.error("Error updating balance on Account Service: {}", ex.getMessage(), ex);
-            throw new AccountServiceUnavailableException("Error communicating with Account Service: " + ex.getMessage(), ex);
+            throw new AccountServiceUnavailableException("Error during balance mutation: " + ex.getMessage(), ex);
         }
     }
 
@@ -108,11 +102,11 @@ public class AccountServiceClient {
             if (error.equalsIgnoreCase("Insufficient Funds") || message.toLowerCase().contains("insufficient")) {
                 throw new InsufficientFundsException(message);
             }
-            throw new RuntimeException("Account Service client error: " + message);
+            throw new RuntimeException("Account Service returned client error: " + message);
         } catch (InsufficientFundsException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new RuntimeException("Error parsing Account Service error: " + ex.getMessage());
+            throw new RuntimeException("Error parsing Account Service error payload: " + ex.getMessage());
         }
     }
 }

@@ -5,7 +5,6 @@ import com.bankease.transaction.client.BalanceOperation;
 import com.bankease.transaction.client.BalanceUpdateRequestDto;
 import com.bankease.transaction.dto.*;
 import com.bankease.transaction.entity.Transaction;
-import com.bankease.transaction.entity.TransactionStatus;
 import com.bankease.transaction.entity.TransactionType;
 import com.bankease.transaction.exception.InvalidTransactionException;
 import com.bankease.transaction.repository.TransactionRepository;
@@ -32,34 +31,30 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionResponse deposit(DepositRequest request) {
-        log.info("Initiating DEPOSIT into account ID {}: amount {}", request.getAccountId(), request.getAmount());
+        log.info("Deposit initiated: target account #{}, amount: {}", request.accountId(), request.amount());
 
-        // 1. Verify destination account exists
-        accountServiceClient.getAccount(request.getAccountId());
+        // Validate account existence against source-of-truth service
+        accountServiceClient.getAccount(request.accountId());
 
-        // 2. Audit record as PENDING
-        Transaction txn = Transaction.builder()
-                .toAccountId(request.getAccountId())
-                .amount(request.getAmount())
-                .transactionType(TransactionType.DEPOSIT)
-                .status(TransactionStatus.PENDING)
-                .description(request.getDescription())
-                .build();
+        Transaction txn = new Transaction(
+                null,
+                request.accountId(),
+                request.amount(),
+                TransactionType.DEPOSIT,
+                request.description()
+        );
         txn = transactionRepository.save(txn);
 
         try {
-            // 3. Credit account in Account Service
             accountServiceClient.updateBalance(
-                    request.getAccountId(),
-                    new BalanceUpdateRequestDto(BalanceOperation.CREDIT, request.getAmount(), "TXN-" + txn.getTransactionId())
+                    request.accountId(),
+                    new BalanceUpdateRequestDto(BalanceOperation.CREDIT, request.amount(), "TXN-" + txn.getTransactionId())
             );
-
-            txn.setStatus(TransactionStatus.SUCCESS);
-            log.info("Deposit successful for transaction ID: {}", txn.getTransactionId());
+            txn.markSuccess();
+            log.info("Deposit completed successfully for transaction ID: {}", txn.getTransactionId());
         } catch (Exception ex) {
             log.error("Deposit failed for transaction ID {}: {}", txn.getTransactionId(), ex.getMessage());
-            txn.setStatus(TransactionStatus.FAILED);
-            txn.setFailureReason(ex.getMessage());
+            txn.markFailed(ex.getMessage());
             transactionRepository.save(txn);
             throw ex;
         }
@@ -70,34 +65,30 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionResponse withdraw(WithdrawRequest request) {
-        log.info("Initiating WITHDRAWAL from account ID {}: amount {}", request.getAccountId(), request.getAmount());
+        log.info("Withdrawal initiated: source account #{}, amount: {}", request.accountId(), request.amount());
 
-        // 1. Verify account exists
-        accountServiceClient.getAccount(request.getAccountId());
+        // Validate account existence
+        accountServiceClient.getAccount(request.accountId());
 
-        // 2. Audit record as PENDING
-        Transaction txn = Transaction.builder()
-                .fromAccountId(request.getAccountId())
-                .amount(request.getAmount())
-                .transactionType(TransactionType.WITHDRAWAL)
-                .status(TransactionStatus.PENDING)
-                .description(request.getDescription())
-                .build();
+        Transaction txn = new Transaction(
+                request.accountId(),
+                null,
+                request.amount(),
+                TransactionType.WITHDRAWAL,
+                request.description()
+        );
         txn = transactionRepository.save(txn);
 
         try {
-            // 3. Debit balance in Account Service
             accountServiceClient.updateBalance(
-                    request.getAccountId(),
-                    new BalanceUpdateRequestDto(BalanceOperation.DEBIT, request.getAmount(), "TXN-" + txn.getTransactionId())
+                    request.accountId(),
+                    new BalanceUpdateRequestDto(BalanceOperation.DEBIT, request.amount(), "TXN-" + txn.getTransactionId())
             );
-
-            txn.setStatus(TransactionStatus.SUCCESS);
-            log.info("Withdrawal successful for transaction ID: {}", txn.getTransactionId());
+            txn.markSuccess();
+            log.info("Withdrawal completed successfully for transaction ID: {}", txn.getTransactionId());
         } catch (Exception ex) {
-            log.warn("Withdrawal failed for transaction ID {}: {}", txn.getTransactionId(), ex.getMessage());
-            txn.setStatus(TransactionStatus.FAILED);
-            txn.setFailureReason(ex.getMessage());
+            log.warn("Withdrawal rejected for transaction ID {}: {}", txn.getTransactionId(), ex.getMessage());
+            txn.markFailed(ex.getMessage());
             transactionRepository.save(txn);
             throw ex;
         }
@@ -105,75 +96,75 @@ public class TransactionServiceImpl implements TransactionService {
         return TransactionResponse.fromEntity(transactionRepository.save(txn));
     }
 
+    /**
+     * Orchestrates a 2-legged cross-service transfer using a Compensating Transaction pattern.
+     * Note: In high-throughput banking systems, this pattern replaces heavy 2PC locks by issuing
+     * an automatic reversing refund if downstream credit fails after source debit has succeeded.
+     */
     @Override
     @Transactional
     public TransactionResponse transfer(TransferRequest request) {
-        log.info("Initiating TRANSFER from account {} to account {}: amount {}",
-                request.getFromAccountId(), request.getToAccountId(), request.getAmount());
+        log.info("Transfer initiated: from account #{} to #{}, amount: {}",
+                request.fromAccountId(), request.toAccountId(), request.amount());
 
-        // 1. Guard against self-transfer
-        if (request.getFromAccountId().equals(request.getToAccountId())) {
+        if (request.fromAccountId().equals(request.toAccountId())) {
             throw new InvalidTransactionException("Source and destination account IDs cannot be the same.");
         }
 
-        // 2. Verify both accounts exist in Account Service
-        accountServiceClient.getAccount(request.getFromAccountId());
-        accountServiceClient.getAccount(request.getToAccountId());
+        // Verify both accounts exist prior to initiating debit leg
+        accountServiceClient.getAccount(request.fromAccountId());
+        accountServiceClient.getAccount(request.toAccountId());
 
-        // 3. Record transaction as PENDING in transaction ledger
-        Transaction txn = Transaction.builder()
-                .fromAccountId(request.getFromAccountId())
-                .toAccountId(request.getToAccountId())
-                .amount(request.getAmount())
-                .transactionType(TransactionType.TRANSFER)
-                .status(TransactionStatus.PENDING)
-                .description(request.getDescription())
-                .build();
+        Transaction txn = new Transaction(
+                request.fromAccountId(),
+                request.toAccountId(),
+                request.amount(),
+                TransactionType.TRANSFER,
+                request.description()
+        );
         txn = transactionRepository.save(txn);
 
-        // 4. Step 1: Debit source account
+        // Leg 1: Debit source account
         try {
             accountServiceClient.updateBalance(
-                    request.getFromAccountId(),
-                    new BalanceUpdateRequestDto(BalanceOperation.DEBIT, request.getAmount(), "TXN-" + txn.getTransactionId())
+                    request.fromAccountId(),
+                    new BalanceUpdateRequestDto(BalanceOperation.DEBIT, request.amount(), "TXN-" + txn.getTransactionId())
             );
         } catch (Exception debitEx) {
-            log.warn("Transfer debit failed for transaction ID {}: {}", txn.getTransactionId(), debitEx.getMessage());
-            txn.setStatus(TransactionStatus.FAILED);
-            txn.setFailureReason("Debit failed: " + debitEx.getMessage());
+            log.warn("Transfer debit leg failed for transaction ID {}: {}", txn.getTransactionId(), debitEx.getMessage());
+            txn.markFailed("Debit failed: " + debitEx.getMessage());
             transactionRepository.save(txn);
             throw debitEx;
         }
 
-        // 5. Step 2: Credit destination account (with compensating rollback on failure)
+        // Leg 2: Credit destination account (with compensating rollback guard)
         try {
             accountServiceClient.updateBalance(
-                    request.getToAccountId(),
-                    new BalanceUpdateRequestDto(BalanceOperation.CREDIT, request.getAmount(), "TXN-" + txn.getTransactionId())
+                    request.toAccountId(),
+                    new BalanceUpdateRequestDto(BalanceOperation.CREDIT, request.amount(), "TXN-" + txn.getTransactionId())
             );
         } catch (Exception creditEx) {
-            log.error("Transfer credit to account {} failed after successful debit. Executing compensation refund.",
-                    request.getToAccountId(), creditEx);
+            log.error("Transfer credit leg failed for transaction ID {}. Executing compensating refund to source account #{}",
+                    txn.getTransactionId(), request.fromAccountId(), creditEx);
 
             try {
-                // Compensating Action: Refund debited amount back to source account
+                // Compensating action: refund debited amount back to sender
                 accountServiceClient.updateBalance(
-                        request.getFromAccountId(),
-                        new BalanceUpdateRequestDto(BalanceOperation.CREDIT, request.getAmount(), "TXN-REFUND-" + txn.getTransactionId())
+                        request.fromAccountId(),
+                        new BalanceUpdateRequestDto(BalanceOperation.CREDIT, request.amount(), "TXN-REFUND-" + txn.getTransactionId())
                 );
-                txn.setFailureReason("Credit to recipient failed. Funds refunded back to source account: " + creditEx.getMessage());
-            } catch (Exception refundEx) {
-                log.error("CRITICAL: Compensation refund failed for transaction ID {}: {}", txn.getTransactionId(), refundEx.getMessage());
-                txn.setFailureReason("Credit failed and auto-refund failed. Manual reconciliation required: " + refundEx.getMessage());
+                txn.markFailed("Credit to recipient failed. Funds refunded back to source: " + creditEx.getMessage());
+            } catch (Exception compensationEx) {
+                log.error("CRITICAL: Automated compensation refund failed for transaction #{}. Flagged for manual reconciliation.",
+                        txn.getTransactionId(), compensationEx);
+                txn.markFailed("Credit failed and auto-refund failed. Manual reconciliation required: " + compensationEx.getMessage());
             }
 
-            txn.setStatus(TransactionStatus.FAILED);
             transactionRepository.save(txn);
             throw creditEx;
         }
 
-        // 6. Complete transaction
-        txn.setStatus(TransactionStatus.SUCCESS);
+        txn.markSuccess();
         log.info("Transfer completed successfully for transaction ID: {}", txn.getTransactionId());
         return TransactionResponse.fromEntity(transactionRepository.save(txn));
     }
@@ -181,7 +172,6 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional(readOnly = true)
     public Page<TransactionResponse> getAccountTransactions(Long accountId, Pageable pageable) {
-        log.debug("Fetching transactions for account ID: {}", accountId);
         return transactionRepository.findByAccountId(accountId, pageable)
                 .map(TransactionResponse::fromEntity);
     }
@@ -189,9 +179,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional(readOnly = true)
     public TransactionResponse getTransactionById(Long transactionId) {
-        log.debug("Fetching transaction by ID: {}", transactionId);
-        Transaction txn = transactionRepository.findById(transactionId)
+        return transactionRepository.findById(transactionId)
+                .map(TransactionResponse::fromEntity)
                 .orElseThrow(() -> new InvalidTransactionException("Transaction not found with ID: " + transactionId));
-        return TransactionResponse.fromEntity(txn);
     }
 }

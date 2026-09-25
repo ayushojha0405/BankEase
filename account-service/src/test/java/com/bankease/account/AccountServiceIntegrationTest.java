@@ -34,11 +34,11 @@ class AccountServiceIntegrationTest {
     @Test
     @DisplayName("Should successfully create a new bank account")
     void testCreateAccount() throws Exception {
-        AccountCreateRequest request = AccountCreateRequest.builder()
-                .accountHolderName("Amit Patel")
-                .accountType(AccountType.SAVINGS)
-                .initialDeposit(new BigDecimal("10000.00"))
-                .build();
+        AccountCreateRequest request = new AccountCreateRequest(
+                "Amit Patel",
+                AccountType.SAVINGS,
+                new BigDecimal("10000.00")
+        );
 
         mockMvc.perform(post("/api/v1/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -54,12 +54,11 @@ class AccountServiceIntegrationTest {
     @Test
     @DisplayName("Should debit balance and reject debit on insufficient funds")
     void testBalanceDebitAndInsufficientFunds() throws Exception {
-        // 1. Create account with 2000.00
-        AccountCreateRequest request = AccountCreateRequest.builder()
-                .accountHolderName("Priya Verma")
-                .accountType(AccountType.CURRENT)
-                .initialDeposit(new BigDecimal("2000.00"))
-                .build();
+        AccountCreateRequest request = new AccountCreateRequest(
+                "Priya Verma",
+                AccountType.CURRENT,
+                new BigDecimal("2000.00")
+        );
 
         String response = mockMvc.perform(post("/api/v1/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -70,12 +69,12 @@ class AccountServiceIntegrationTest {
         Number accountIdNum = com.jayway.jsonpath.JsonPath.read(response, "$.data.accountId");
         long accountId = accountIdNum.longValue();
 
-        // 2. Successful debit 500.00 -> balance becomes 1500.00
-        BalanceUpdateRequest debitReq = BalanceUpdateRequest.builder()
-                .operation(BalanceOperation.DEBIT)
-                .amount(new BigDecimal("500.00"))
-                .reference("REF-101")
-                .build();
+        // 1. Successful debit
+        BalanceUpdateRequest debitReq = new BalanceUpdateRequest(
+                BalanceOperation.DEBIT,
+                new BigDecimal("500.00"),
+                "REF-101"
+        );
 
         mockMvc.perform(put("/api/v1/accounts/" + accountId + "/balance")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -83,17 +82,18 @@ class AccountServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.currentBalance", is(1500.00)));
 
-        // 3. Failed debit 2000.00 (insufficient balance)
-        BalanceUpdateRequest overDebit = BalanceUpdateRequest.builder()
-                .operation(BalanceOperation.DEBIT)
-                .amount(new BigDecimal("2000.00"))
-                .reference("REF-102")
-                .build();
+        // 2. Insufficient balance debit attempt
+        BalanceUpdateRequest overDebit = new BalanceUpdateRequest(
+                BalanceOperation.DEBIT,
+                new BigDecimal("2000.00"),
+                "REF-102"
+        );
 
         mockMvc.perform(put("/api/v1/accounts/" + accountId + "/balance")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(overDebit)))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode", is("ACC-4001")))
                 .andExpect(jsonPath("$.error", is("Insufficient Funds")));
     }
 
@@ -103,6 +103,7 @@ class AccountServiceIntegrationTest {
         mockMvc.perform(get("/api/v1/accounts/99999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.errorCode", is("ACC-4041")))
                 .andExpect(jsonPath("$.error", is("Not Found")));
     }
 }
