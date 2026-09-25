@@ -18,7 +18,7 @@
     <packaging>pom</packaging>
 
     <name>BankEase Parent</name>
-    <description>Core Banking Microservices Platform - Kotak Tech Project</description>
+    <description>Core Banking Microservices Platform</description>
 
     <modules>
         <module>account-service</module>

@@ -15,7 +15,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("BankEase — Transaction Service API")
-                        .description("Core Banking Microservices Platform: Fund Transfer & Transaction Ledger API (Kotak Tech)")
+                        .description("Core Banking Microservices Platform: Fund Transfer & Transaction Ledger API")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("BankEase Engineering")

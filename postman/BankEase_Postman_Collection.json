@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b78b5e28-1111-4444-9999-bankease0001",
     "name": "BankEase — Core Banking Microservices API",
-    "description": "Comprehensive API collection for BankEase Core Banking Microservices Platform (Kotak Tech Associate III SE). Covers Account Service (:8081) and Transaction Service (:8082).",
+    "description": "Comprehensive API collection for BankEase Core Banking Microservices Platform. Covers Account Service (:8081) and Transaction Service (:8082).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [

@@ -1,7 +1,7 @@
 # BankEase: Core Banking Microservices Platform
 ## Implementation Plan & Architectural Roadmap
 
-Prepared for: **Kotak Tech — Associate III Software Engineering Application**  
+Prepared for: **Enterprise Core Banking Backend Engineering**  
 Document Source: [`BankEase_Project_Build_Plan.docx`](file:///c:/DRIVE1/Projects/Ongoing/BankEase/BankEase_Project_Build_Plan.docx)
 
 ---
@@ -15,14 +15,14 @@ Document Source: [`BankEase_Project_Build_Plan.docx`](file:///c:/DRIVE1/Projects
 - **Resilient synchronous REST inter-service communication**
 - **Docker-ready containerization and orchestration**
 
-The project is structured to directly mirror the technical requirements of the Kotak Tech Associate III SE profile: **Java 17 / Spring Boot 3.x, Spring Data JPA, Relational DBMS (MySQL/PostgreSQL), RESTful APIs, and Containerization**.
+The project is structured to directly implement the technical requirements of enterprise core banking microservices: **Java 17 / Spring Boot 3.x, Spring Data JPA, Relational DBMS (MySQL/PostgreSQL), RESTful APIs, and Containerization**.
 
 ---
 
 ### 2. Environment Diagnostics & Technical Decisions
 
 From the initial system scan on your machine:
-- **Java**: `Java 25 LTS` is installed (`C:\Program Files\Java\jdk-25.0.2`). We will configure the Maven compiler target to Java 17 bytecode compatibility to strictly align with Kotak's JD while compiling effortlessly on your installed JDK.
+- **Java**: `Java 25 LTS` is installed (`C:\Program Files\Java\jdk-25.0.2`). We will configure the Maven compiler target to Java 17 bytecode compatibility for enterprise production standards while compiling effortlessly on your installed JDK.
 - **Maven**: `Apache Maven 3.9.12` is globally installed and verified.
 - **Docker**: Docker CLI is currently not detected in the system `PATH`. We will structure the project with an **H2 / local DB dev profile** so you can develop and test immediately without Docker, alongside standard **Dockerfiles and `docker-compose.yml`** for production/containerized deployment.
 - **Database Selection**: The build plan mentions PostgreSQL in the table and MySQL in diagrams/checklists. We will use **MySQL** as the primary relational database (with Spring profiles supporting PostgreSQL or in-memory H2 for zero-overhead local testing).
@@ -166,7 +166,7 @@ Because `account-service` and `transaction-service` operate on different databas
   - `transaction-service` (depends_on DB & account-service healthcheck)
 - Provide environment variable overrides for database URLs and service ports.
 
-#### **Phase 5: API Documentation & Kotak Interview Readiness**
+#### **Phase 5: API Documentation & Technical Defense Readiness**
 - Integrate `springdoc-openapi-starter-webmvc-ui` for live interactive Swagger UI on:
   - `http://localhost:8081/swagger-ui.html`
   - `http://localhost:8082/swagger-ui.html`
@@ -178,7 +178,7 @@ Because `account-service` and `transaction-service` operate on different databas
 
 ---
 
-### 5. Kotak Interview Defense Cheat Sheet
+### 5. Core Banking Technical Defense Cheat Sheet
 
 | Question | Strong Architectural Answer |
 | :--- | :--- |

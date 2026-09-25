@@ -8,7 +8,7 @@
 
 BankEase is an enterprise-grade core banking backend platform built as independent, loosely coupled microservices. It models essential retail banking operations: customer account lifecycle, balance ledger management, deposits, cash withdrawals, and two-party fund transfers with distributed compensation guarantees.
 
-> **Target Profile**: Kotak Tech — Associate III Software Engineering Application  
+> **Domain**: Enterprise Core Banking & Fintech Microservices  
 > **Key Disciplines**: Java 17, Spring Boot 3.x, Spring Data JPA, Microservices Architecture, Database-per-Service (PostgreSQL / H2), RESTful APIs, Docker containerization, and Optimistic Locking.
 
 ---
@@ -257,25 +257,8 @@ Run the comprehensive test suite across all modules:
 
 ---
 
-## 10. Kotak Technical Interview Defense Guide
 
-### Q1: Why did you choose the Database-per-Service pattern instead of a shared database?
-> **Answer**: In a true microservices architecture, sharing a database creates a single point of failure and tight schema coupling across domain boundaries. In BankEase, `accounts_db` and `transactions_db` are isolated. Any schema migration in the transaction ledger can occur independently without risking account data availability. Furthermore, read-heavy account queries do not compete for database connection pools with write-heavy transaction streams.
-
-### Q2: How do you handle distributed transactions without 2-Phase Commit (2PC)?
-> **Answer**: 2PC is a blocking protocol that introduces single points of failure, resource locking, and significant latency. In BankEase, we implement an **orchestrated compensating transaction pattern**:
-> 1. `transaction-service` logs an initial transaction record with status `PENDING`.
-> 2. It synchronously debits the sender account via `account-service`.
-> 3. It credits the recipient account.
-> 4. If the credit operation fails (due to network timeout, downstream failure, or server error), `transaction-service` catches the exception and immediately invokes a **compensating credit** back to the sender account.
-> 5. The transaction is marked `FAILED` with an exact failure reason, ensuring an auditable ledger trail without dirty writes.
-
-### Q3: How do you prevent race conditions (e.g., double-spending)?
-> **Answer**: `account-service` uses JPA **Optimistic Locking** via an `@Version` column on the `Account` entity. When concurrent requests attempt to debit an account simultaneously, Hibernate checks the version upon commit. If another thread or process updated the balance in the interim, Hibernate throws an `OptimisticLockingFailureException`. Our `GlobalExceptionHandler` intercepts this and returns HTTP `409 Conflict`, preserving financial integrity.
-
----
-
-## 11. Project Repository Structure
+## 10. Project Repository Structure
 
 ```text
 BankEase/
@@ -323,5 +306,5 @@ BankEase/
 
 ---
 
-## 12. License
+## 11. License
 This project is open-source and licensed under the [Apache License 2.0](LICENSE).

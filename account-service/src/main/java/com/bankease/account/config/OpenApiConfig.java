@@ -15,7 +15,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("BankEase — Account Service API")
-                        .description("Core Banking Microservices Platform: Account Lifecycle & Balance Management API (Kotak Tech)")
+                        .description("Core Banking Microservices Platform: Account Lifecycle & Balance Management API")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("BankEase Engineering")
