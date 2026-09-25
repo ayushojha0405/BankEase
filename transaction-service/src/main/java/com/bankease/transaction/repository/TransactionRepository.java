@@ -1,0 +1,16 @@
+package com.bankease.transaction.repository;
+
+import com.bankease.transaction.entity.Transaction;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+
+    @Query("SELECT t FROM Transaction t WHERE t.fromAccountId = :accountId OR t.toAccountId = :accountId ORDER BY t.timestamp DESC")
+    Page<Transaction> findByAccountId(@Param("accountId") Long accountId, Pageable pageable);
+}

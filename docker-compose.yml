@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # Accounts Database (PostgreSQL)
+  # -------------------------------------------------------------
+  accounts-db:
+    image: postgres:16-alpine
+    container_name: bankease-accounts-db
+    environment:
+      POSTGRES_DB: accounts_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - accounts_data:/var/lib/postgresql/data
+    networks:
+      - bankease-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d accounts_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------
+  # Transactions Database (PostgreSQL)
+  # -------------------------------------------------------------
+  transactions-db:
+    image: postgres:16-alpine
+    container_name: bankease-transactions-db
+    environment:
+      POSTGRES_DB: transactions_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - transactions_data:/var/lib/postgresql/data
+    networks:
+      - bankease-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d transactions_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------
+  # Account Service Microservice (Port 8081)
+  # -------------------------------------------------------------
+  account-service:
+    build:
+      context: .
+      dockerfile: account-service/Dockerfile
+    container_name: bankease-account-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_URL: jdbc:postgresql://accounts-db:5432/accounts_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+    depends_on:
+      accounts-db:
+        condition: service_healthy
+    networks:
+      - bankease-network
+
+  # -------------------------------------------------------------
+  # Transaction Service Microservice (Port 8082)
+  # -------------------------------------------------------------
+  transaction-service:
+    build:
+      context: .
+      dockerfile: transaction-service/Dockerfile
+    container_name: bankease-transaction-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_URL: jdbc:postgresql://transactions-db:5432/transactions_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+      ACCOUNT_SERVICE_URL: http://account-service:8081
+    depends_on:
+      transactions-db:
+        condition: service_healthy
+      account-service:
+        condition: service_started
+    networks:
+      - bankease-network
+
+volumes:
+  accounts_data:
+  transactions_data:
+
+networks:
+  bankease-network:
+    driver: bridge
